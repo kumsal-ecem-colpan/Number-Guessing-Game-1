@@ -1,0 +1,15 @@
+myinput = input("Please give me a DNA sequence and I will check whether it is valid or not!").upper() #to make sure that it can handle lowercase letters
+bases = ["A", "T", "G", "C"]
+
+for harf in myinput:   #or if harf not in myinput da kullanabilirsin!
+    if harf in bases:
+        x = 1
+    else:
+        x = 0
+        break
+if x == 1:
+    print("This is a valid DNA sequence.")
+else:
+    position = myinput.find(harf)
+    net_position = int(position) + 1
+    print(harf + " " + "(base" + " " + str(net_position) + ")" + " " + "is not a valid base. This is not a valid DNA sequence.")
