@@ -1,0 +1,163 @@
+import requests
+
+class transcript():  #defining the terms in the class
+    def __init__(self, id, chromosome, strand, ts_start, ts_end, cds_start, cds_end, exon_start, exon_end): #defining the parameters
+        self.id = id
+        self.chromosome = chromosome
+        self.strand = strand
+        self.ts_start = ts_start
+        self.ts_end = ts_end
+        self.cds_start = cds_start
+        self.cds_end = cds_end
+        self.exon_start = exon_start
+        self.exon_end = exon_end
+        self.cds_coordinate_list = self.cds_coordinate_collector()
+
+    def transcript_length_calculator(self): #calculating the transcript lengths of all exons
+        exon_starts_ends_zip = zip(self.exon_start, self.exon_end)
+        exon_list = list(exon_starts_ends_zip)
+        transcript_length =0
+        for start, end in exon_list:
+            exon_length = end - start
+            transcript_length += exon_length
+        return transcript_length
+
+    def cds_length_calculator(self):  # calculating the length of exons between cds_start and cds_end
+        exon_starts_ends_zip = zip(self.exon_start, self.exon_end)
+        exon_list = list(exon_starts_ends_zip)
+        only_cds_exons_list = []
+        cds_length = 0
+        for start, end in exon_list:
+            cds_length_temp = 0
+            if start < self.cds_start and end in range(self.cds_start, self.cds_end):
+                cds_length_temp = end - self.cds_start
+            elif start in range(self.cds_start, self.cds_end) and end > self.cds_end:
+                cds_length_temp = self.cds_end - start
+            elif start in range(self.cds_start, self.cds_end) and end in range(self.cds_start, self.cds_end):
+                cds_length_temp = end - start
+            cds_length += cds_length_temp
+        return cds_length
+
+    def cds_coordinate_collector(self):  #taking the coordinates into one list
+        exon_starts_ends_zip = zip(self.exon_start, self.exon_end)
+        exon_list = list(exon_starts_ends_zip)
+        cds_coordinate_list = []
+        for start, end in exon_list:
+            cds_coordinate_temp = 0
+            if start < self.cds_start and end in range(self.cds_start, self.cds_end):
+                cds_coordinate_temp = (self.cds_start, end)
+            elif start in range(self.cds_start, self.cds_end) and end > self.cds_end:
+                cds_coordinate_temp = (start, self.cds_end)
+            elif start in range(self.cds_start, self.cds_end) and end in range(self.cds_start, self.cds_end):
+                cds_coordinate_temp = (start, end)
+            if cds_coordinate_temp != 0:
+                cds_coordinate_list.append(cds_coordinate_temp)
+        return cds_coordinate_list
+
+    def cds_sequence_collector(self):   #taking the sequences according to the coordinates
+        cds_sequences = ""
+        if self.strand == "+":
+            for start, end in self.cds_coordinate_list:
+                import_url = f"http://togows.org/api/ucsc/hg19/{self.chromosome}:{start + 1}-{end}" #+1 is because of the ensembl data
+                cds_sequences_temp = requests.get(import_url).content.decode().upper()
+                cds_sequences += cds_sequences_temp
+            return_value = cds_sequences
+        elif self.strand == "-":
+            for start, end in self.cds_coordinate_list:
+                import_url = f"http://togows.org/api/ucsc/hg19/{self.chromosome}:{start + 1}-{end}"
+                strand = requests.get(import_url).content.decode().upper()
+                cds_sequences += strand
+                complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N'}
+                liste = [complement[harf] for harf in strand]
+                new_liste = ''.join(liste)
+            return_value = str(new_liste)[::-1] #taking the reverse strand
+        return return_value
+
+    def aminoacid_collector(self):    #getting the aminoacid translations of the sequences
+        aminoacid_translations = {'ATA': 'I', 'ATC': 'I', 'ATT': 'I', 'ATG': 'M', 'ACA': 'T', 'ACC': 'T', 'ACG': 'T', 'ACT': 'T', 'AAC': 'N',
+			'AAT': 'N', 'AAA': 'K', 'AAG': 'K', 'AGC': 'S', 'AGT': 'S', 'AGA': 'R', 'AGG': 'R', 'CTA': 'L', 'CTC': 'L',
+			'CTG': 'L', 'CTT': 'L', 'CCA': 'P', 'CCC': 'P', 'CCG': 'P', 'CCT': 'P', 'CAC': 'H', 'CAT': 'H', 'CAA': 'Q',
+			'CAG': 'Q', 'CGA': 'R', 'CGC': 'R', 'CGG': 'R', 'CGT': 'R', 'GTA': 'V', 'GTC': 'V', 'GTG': 'V', 'GTT': 'V',
+			'GCA': 'A', 'GCC': 'A', 'GCG': 'A', 'GCT': 'A', 'GAC': 'D', 'GAT': 'D', 'GAA': 'E', 'GAG': 'E', 'GGA': 'G',
+			'GGC': 'G', 'GGG': 'G', 'GGT': 'G', 'TCA': 'S', 'TCC': 'S', 'TCG': 'S', 'TCT': 'S', 'TTC': 'F', 'TTT': 'F',
+			'TTA': 'L', 'TTG': 'L', 'TAC': 'Y', 'TAT': 'Y', 'TAA': '__', 'TAG': '__', 'TGC': 'C', 'TGT': 'C', 'TGA': '__',
+			'TGG': 'W'}
+
+        cds_sequences = self.cds_sequence_collector()
+        aa_codons = []
+        for seq in range(0, len(cds_sequences), 3):
+            codon = cds_sequences[seq:(seq + 3)]
+            aa_codons.append(codon)
+
+        aminoacid_sequences = ""
+        for codon in aa_codons:
+            if codon in aminoacid_translations:
+                aminoacid_sequences += aminoacid_translations[codon]
+            else:
+                aminoacid_sequences += "X"   #taking X if the codon part is not in the aminoacid translations dictionary, even the shorter ones
+        return aminoacid_sequences
+
+
+def parser_function(text, filter = True):   #parsing the data with length-filters
+   with open(text) as sequence:
+       transcript_dictionary={}
+       for line in sequence:
+           if line.startswith("#"):
+               continue
+           bolum = line.strip().split("\t")
+           id = bolum[1]
+           chromosome = bolum[2]
+           strand = bolum[3]
+           ts_start = int(bolum[4])
+           ts_end = int(bolum[5])
+           cds_start = int(bolum[6])
+           cds_end = int(bolum[7])
+           exon_start = list(map(int, bolum[9].strip(",").split(",")))
+           exon_end = list(map(int, bolum[10].strip(",").split(",")))
+           result = transcript(id, chromosome, strand, ts_start, ts_end, cds_start, cds_end, exon_start, exon_end)
+
+           if filter == True:
+               if result.cds_length_calculator() >= 12:  #start codon + one aminoacid + stop codon, it should be at least 9
+                    transcript_dictionary[id] = result
+               elif filter == False:
+                   transcript_dictionary[id] = result
+   return transcript_dictionary
+
+def avg_cds_length_calculator(transcript_dictionary):   #avg cds length calculation
+    total_length = 0
+    for line in transcript_dictionary:
+        length = transcript_dictionary[line].cds_length_calculator()
+        total_length += length
+        data_number = len(transcript_dictionary) #the number of the items in the dictionary is used
+        avg_length = int(total_length / data_number)
+    return avg_length
+
+def cds_transcript_ratio_calculator(transcript_dictionary):   #cds/transcript ratio calculation
+    total_transcript_length = 0
+    total_cds_length = 0
+    for line in transcript_dictionary:
+        tr_length = transcript_dictionary[line].transcript_length_calculator()
+        cds_length = transcript_dictionary[line].cds_length_calculator()
+        total_transcript_length += tr_length
+        total_cds_length += cds_length
+        resulted_ratio = float(total_cds_length / total_transcript_length)
+    return resulted_ratio
+
+def cds_and_protein_sequences(transcript_dictionary):  #giving the first 10 of 42th IDs with mod42
+    counter = 0
+    terminator = 0
+    for line in transcript_dictionary:
+        counter += 1
+        if terminator != 10:
+            if counter % 42 == 0: #modus 42 and will be ended at the 10th stage
+                print(f"Transcript ID: \n {transcript_dictionary[line].id}")
+                print(f"CDS Sequence of this ID: \n {transcript_dictionary[line].cds_sequence_collector()}")
+                print(f"The Aminoacid sequence: \n {transcript_dictionary[line].aminoacid_collector()}")
+                terminator += 1
+
+
+imported_data = "ensembl_hg19.txt"
+data_text = parser_function(imported_data)
+print(f"The average length of CDSs is {avg_cds_length_calculator(data_text)}")
+print(f"The ratio of total CDS length to total transcript length is {cds_transcript_ratio_calculator(data_text)}")
+print(cds_and_protein_sequences(data_text))
