@@ -1,0 +1,22 @@
+def gene_calculator():
+    gene_dictionary = {"GPR139": 1613, "YAP1": 2393, "RASGEF1B": 2277, "PAH": 4122, "PLCB2": 4616, "GAPDH": 1875, "SST": 618}
+    x = 0
+    while x == 0:
+        length = input("Give me an integer!")
+        if length == "exit":
+            break
+        else:
+            toplam = 0
+            counter = 0
+            print("These are the genes:")
+            for key in gene_dictionary:
+                if int(gene_dictionary[key]) > int(length):
+                    toplam += int(gene_dictionary[key])
+                    print(key)
+                    counter +=1
+            print("This is the sum:")
+            print(toplam)
+            print("This is the average length:")
+            print(toplam/counter)
+
+gene_calculator()
