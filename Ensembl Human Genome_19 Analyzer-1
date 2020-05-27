@@ -1,0 +1,72 @@
+x = "ensembl_hg19.txt"
+def exon_average(x):
+    with open(x) as genes:
+        toplam = 0
+        counter =0
+        for line in genes:
+            if line.startswith("#"): continue
+            parca = line.split("\t")
+            exon = int(parca[8])
+            toplam += exon
+            counter += 1
+    return int(toplam / counter)
+
+def longest_exon(a):
+    dictionary = {}
+    with open(x) as genes:
+        for line in genes:
+            if line.startswith("#"):
+                continue
+            parca = line.split("\t")
+            name = parca[12]
+            length = int(parca[5]) - int(parca[4])
+            strand = parca[3]
+            if strand == str(a):
+                if name not in dictionary:
+                    key = name
+                    value = length
+                    dictionary[key] = value
+                elif name in dictionary:
+                    key = name
+                    value = length
+                    if value > dictionary[key]:
+                        dictionary[key] = value
+        liste = max(dictionary, key = dictionary.get)
+    return liste
+
+def avg_fiv_utr_finder():
+    with open(x) as genes:
+        toplam = 0
+        counter =0
+        for line in genes:
+            if line.startswith("#"): continue
+            part = line.split("\t")
+            if part[3] == "+":
+                utr = int(part[6]) - int(part[4])
+            elif part[3] == "-":
+                utr = int(part[5]) - int(part[7])
+            toplam += int(utr)
+            counter += 1
+    return int(toplam / counter)
+
+def avg_tri_utr_finder():
+    with open(x) as genes:
+        toplam = 0
+        counter =0
+        for line in genes:
+            if line.startswith("#"): continue
+            part = line.split("\t")
+            if part[3] == "+":
+                utr = int(part[5]) - int(part[7])
+            elif part[3] == "-":
+                utr = int(part[6]) - int(part[4])
+            toplam += utr
+            counter += 1
+    return int(toplam / counter)
+
+
+print("Average length of exons is:" + " " + str(exon_average(x)))
+print("The average length of 5' UTR is:" + " " + str(avg_fiv_utr_finder()))
+print("The average length of 3' UTR is:" + " " +str(avg_tri_utr_finder()))
+print("Longest gene in + strand is:" + " "  + str(longest_exon("+")))
+print("Longest gene in - strand is:" + " "  + str(longest_exon("-")))
